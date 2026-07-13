@@ -1,0 +1,389 @@
+<!doctype html>
+<!-- Grass · "Everything here answers back". © 2026 Vladislav Chumachenko MIT License. Please keep attribution. -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A field to walk — Vladislav Chumachenko</title>
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ margin:0; overflow:hidden; color:#f2f3f6;
+    background:radial-gradient(120% 80% at 50% -10%, #14161d 0%, #050506 60%) fixed, #050506;
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center; padding:28px; -webkit-tap-highlight-color:transparent; }
+
+  .back{ position:fixed; left:20px; top:18px; z-index:9; display:inline-flex; align-items:center; gap:7px;
+    padding:8px 13px 8px 11px; border-radius:999px; text-decoration:none;
+    background:rgba(255,255,255,.08); color:#eaf2f6; border:1px solid rgba(255,255,255,.10);
+    font:600 12.5px/1 -apple-system,Inter,sans-serif; backdrop-filter:blur(10px);
+    transition:background .18s, transform .18s; }
+  .back:hover{ background:rgba(255,255,255,.16); transform:translateX(-2px); }
+
+  /* небо+земля одним CSS-градиентом, three-канвас (alpha) рисует траву поверх */
+  .screen{ position:relative; width:min(440px,100%); aspect-ratio:3/4; border-radius:34px; overflow:hidden;
+    background:linear-gradient(180deg, #a6d8f2 0%, #cfe9b8 42%, #4b8b3e 56%, #285a2c 100%);
+    isolation:isolate; box-shadow:0 40px 90px rgba(0,0,0,.6), 0 4px 0 rgba(255,255,255,.05) inset; }
+  .screen canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; touch-action:none; }
+
+  .frame{ position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    box-shadow: inset 0 0 70px 22px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.30), inset 0 0 0 1px rgba(255,255,255,.07); }
+  .topscrim{ position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:linear-gradient(180deg, rgba(6,26,10,.34) 0%, rgba(6,26,10,0) 28%); }
+
+  .head{ position:absolute; left:20px; right:20px; top:18px; z-index:2; pointer-events:none; text-shadow:0 1px 12px rgba(0,20,8,.4); }
+  .head .k{ font:600 11px/1 ui-monospace,Menlo,monospace; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  .head .n{ margin-top:6px; font-size:24px; font-weight:700; letter-spacing:-.02em; color:#fff; }
+
+  .bar{ position:absolute; left:14px; right:14px; bottom:14px; z-index:3;
+    display:flex; align-items:center; gap:12px; padding:11px 11px 11px 16px;
+    background:rgba(10,18,10,.42); border:1px solid rgba(255,255,255,.10); border-radius:20px;
+    backdrop-filter:blur(16px) saturate(1.2); box-shadow:0 8px 30px rgba(0,0,0,.35); }
+  .bar .lab{ font:600 11px/1.1 -apple-system,Inter,sans-serif; color:rgba(255,255,255,.85); width:36px; flex:none; letter-spacing:.02em; }
+  .rng{ -webkit-appearance:none; appearance:none; flex:1; height:6px; border-radius:999px; outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), #a9e77f); }
+  .rng::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%; cursor:pointer; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .rng::-moz-range-thumb{ width:20px; height:20px; border:none; border-radius:50%; background:#fff; cursor:pointer; }
+  .val{ font:11px/1 ui-monospace,Menlo,monospace; color:#c8ee9f; width:30px; text-align:right; flex:none; }
+  .fab{ width:44px; height:44px; flex:none; border:none; border-radius:50%; cursor:pointer; background:#fff; color:#0a1016;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.4); transition:transform .12s; }
+  .fab:hover{ transform:translateY(-2px); } .fab:active{ transform:translateY(0) scale(.94); }
+
+  .err{ position:absolute; left:14px; right:14px; bottom:74px; z-index:4; display:none;
+    background:#2a1418; border:1px solid #ff6b6b; color:#ffb3b3; border-radius:12px; padding:12px 14px;
+    font:12px ui-monospace,Menlo,monospace; white-space:pre-wrap; }
+
+  @media (max-width:520px){
+    body{ padding:0; align-items:stretch; }
+    .screen{ width:100%; height:100%; border-radius:0; aspect-ratio:auto; }
+    .back{ background:rgba(255,255,255,.14); }
+    .rng{ height:8px; }                              /* крупнее touch-таргет на мобилке */
+    .rng::-webkit-slider-thumb{ width:26px; height:26px; }
+    .rng::-moz-range-thumb{ width:26px; height:26px; }
+  }
+  @keyframes pageFade{ from{ opacity:0; } to{ opacity:1; } }
+  @media (prefers-reduced-motion: no-preference){
+    body{ animation:pageFade .3s ease both; }
+    body.leaving{ opacity:0; transition:opacity .17s ease; animation:none; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="./index.html">← back</a>
+<div class="screen">
+  <canvas id="c"></canvas>
+  <div class="frame"></div>
+  <div class="topscrim"></div>
+  <div class="bar">
+    <span class="lab">Wind</span>
+    <input class="rng" id="wind" type="range" min="0" max="1.6" step="0.05" value="0.5">
+    <span class="val" id="windVal">0.50</span>
+    <button class="fab" id="gust" aria-label="Gust of wind" title="Gust of wind">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M3 8h11a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h9"/>
+      </svg>
+    </button>
+  </div>
+  <div class="err" id="err"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        onerror="document.getElementById('err').style.display='block';document.getElementById('err').textContent='Не удалось загрузить three.js с CDN. Нужен интернет при первом открытии.';"></script>
+<script>
+(function(){
+  const errBox=document.getElementById('err');
+  const el=(id)=>document.getElementById(id);
+  function fail(m){ errBox.style.display='block'; errBox.textContent+=m+'\n'; }
+  if (typeof THREE==='undefined'){ fail('three.js не подгрузился.'); return; }
+
+  const canvas=el('c');
+  let renderer, scene, camera, field, ground;
+  const clock=new THREE.Clock();
+
+  /* --- настройки (управляются панелью и пресетами) ------------------------- */
+  const U={ density:60000, height:0.7, wind:0.4, radius:1.2,
+            grass:'#347031', tip:'#8fcf52' };
+  const PRESETS={
+    'Газон':       { density:60000, height:0.7, wind:0.4, radius:1.2, grass:'#347031', tip:'#8fcf52' },
+    'Луг':         { density:38000, height:1.1, wind:0.6, radius:1.5, grass:'#3f7d34', tip:'#b0d962' },
+    'Свежее поле': { density:36000, height:1.3, wind:0.7, radius:1.6, grass:'#3c7a33', tip:'#a3d65b' },
+    'Прерия':      { density:28000, height:1.7, wind:1.0, radius:1.9, grass:'#4c7a2e', tip:'#c8d97a' },
+    'Пшеница':     { density:32000, height:1.5, wind:0.9, radius:1.8, grass:'#7a7230', tip:'#e8d888' },
+    'Сумерки':     { density:44000, height:0.9, wind:0.5, radius:1.4, grass:'#2a4736', tip:'#7fae86' },
+  };
+
+  /* --- шейдеры лезвия ------------------------------------------------------- */
+  const VERT=`
+    attribute float aPhase;
+    attribute float aTint;
+    uniform float uTime;
+    uniform float uWind;
+    uniform vec2  uWindDir;    // единое направление ветра на всё поле
+    uniform float uRadius;
+    uniform int   uStepCount;
+    uniform float uStepLife;
+    uniform vec4  uStepA[16];   // xy = позиция следа, zw = направление шага
+    uniform float uStepT[16];   // время рождения следа
+    varying float vH;
+    varying float vTint;
+    varying float vAO;
+    varying float vFog;
+    varying vec3  vNormalW;
+    varying vec3  vView;
+
+    void main(){
+      float h = position.y;                 // 0..1 вдоль лезвия
+      vH = h; vTint = aTint;
+
+      // в мир
+      vec3 pos = position;
+      vec4 world = instanceMatrix * vec4(pos, 1.0);
+
+      // ВЕТЕР: единое направление на всё поле + порывы, бегущие по ветру.
+      // Наклон считаем в МИРЕ (а не в локальных осях лезвия) — иначе соседние
+      // травинки клонятся в разные стороны и всё мотает вразнобой.
+      vec2 wd = normalize(uWindDir);
+      float travel = dot(world.xz, wd);
+      float gust    = sin(travel*0.35 - uTime*1.1);              // крупные волны-фронты
+      float sway    = sin(travel*1.20 - uTime*2.2 + aPhase*0.5); // помельче
+      float flutter = 0.06*sin(uTime*6.0 + aPhase);              // лёгкий трепет травинки
+      float amt = uWind * (0.22*gust + 0.10*sway + flutter) * pow(h, 1.5);
+      world.xz += wd * amt;                                      // все клонятся в одну сторону
+      world.y  -= abs(amt)*0.15;                                 // кончик слегка опускается
+
+      // следы-шаги: каждый след приминает траву ВДОЛЬ направления шага
+      // (все травинки в следе клонятся в одну сторону → без дёрганья)
+      float press = 0.0;
+      vec2 lean = vec2(0.0);
+      for (int i=0; i<16; i++){
+        if (i >= uStepCount) break;
+        float age = uTime - uStepT[i];
+        float fade = clamp(1.0 - age/uStepLife, 0.0, 1.0);
+        if (fade <= 0.0) continue;
+        vec4 st = uStepA[i];
+        vec2 fwd = st.zw;
+        vec2 sidev = vec2(-fwd.y, fwd.x);
+        vec2 rel = world.xz - st.xy;
+        float along = dot(rel, fwd);
+        float perp  = dot(rel, sidev);
+        float dOval = length(vec2(along/1.5, perp/0.85)) / max(uRadius, 1e-3);  // овал по ходу
+        float w = smoothstep(1.0, 0.0, dOval) * fade;
+        press = max(press, w);
+        lean += fwd * w;
+      }
+      world.xz += lean * uRadius * 0.5 * pow(h, 1.2);   // клонит вдоль шага
+      world.y  -= press * 0.6 * h;                       // приминает вниз
+      vAO = 1.0 - press * 0.5;
+
+      // нормаль лезвия в мире (грань смотрит вдоль локального +z) и вью-вектор
+      vNormalW = normalize(mat3(instanceMatrix) * vec3(0.0, 0.0, 1.0));
+      vView = cameraPosition - world.xyz;
+
+      vec4 viewPos = viewMatrix * world;
+      vFog = -viewPos.z;                      // глубина для тумана
+      gl_Position = projectionMatrix * viewPos;
+    }`;
+
+  const FRAG=`
+    precision highp float;
+    uniform vec3 uGrass;
+    uniform vec3 uTip;
+    uniform vec3 uFog;
+    uniform float uFogNear;
+    uniform float uFogFar;
+    uniform vec3 uLightDir;    // направление НА солнце
+    uniform vec3 uBack;        // тёплый цвет подсветки на просвет
+    varying float vH;
+    varying float vTint;
+    varying float vAO;
+    varying float vFog;
+    varying vec3  vNormalW;
+    varying vec3  vView;
+    void main(){
+      vec3 base = mix(uGrass, uTip, vH*vH);        // цвет основание → кончик
+      base *= 0.78 + 0.32*vTint;                    // разнобой оттенка
+
+      // тень у корней: плотная у земли, светлее к кончику
+      float rootAO = 0.30 + 0.70*pow(vH, 0.8);
+      base *= rootAO;
+      base *= vAO;                                  // тень в следе
+
+      vec3 N = normalize(vNormalW);
+      vec3 L = normalize(uLightDir);
+      vec3 V = normalize(vView);
+
+      // мягкий дневной свет, без пересвета
+      float ndl = abs(dot(N, L));
+      float lit = 0.58 + 0.42*ndl;
+      vec3 col = base * lit;
+
+      // деликатная подсветка на просвет — тонкая, не слепит
+      float back = pow(clamp(dot(V, -L), 0.0, 1.0), 3.0);
+      col += uBack * back * (0.12 + 0.30*vH);
+
+      float f = smoothstep(uFogNear, uFogFar, vFog);
+      col = mix(col, uFog, f);                           // даль тает в дымку у горизонта
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+
+  const MAXSTEPS=16;
+  const stepA=[]; for(let i=0;i<MAXSTEPS;i++) stepA.push(new THREE.Vector4(0,0,0,1));
+  const stepT=new Float32Array(MAXSTEPS);
+  const uniforms={
+    uTime:{value:0}, uWind:{value:U.wind}, uWindDir:{value:new THREE.Vector2(1.0,0.35).normalize()}, uRadius:{value:U.radius},
+    uStepCount:{value:0}, uStepLife:{value:2.6}, uStepA:{value:stepA}, uStepT:{value:stepT},
+    uGrass:{value:new THREE.Color(U.grass)}, uTip:{value:new THREE.Color(U.tip)},
+    uFog:{value:new THREE.Color('#cfe9b8')}, uFogNear:{value:40}, uFogFar:{value:90},  // туман фактически выключен (поле мелкое)
+    uLightDir:{value:new THREE.Vector3(-0.3,0.85,-0.35).normalize()},    // высокое дневное солнце
+    uBack:{value:new THREE.Color('#eef6ff').multiplyScalar(0.40)},       // холодная подсветка, без желтизны
+  };
+
+  /* --- геометрия одного лезвия (изогнутая полоска) ------------------------- */
+  function bladeGeometry(){
+    const SEG=5, W=0.06;
+    const pos=[], idx=[];
+    for(let i=0;i<=SEG;i++){
+      const t=i/SEG;
+      const w=W*(1.0-t*0.92);            // сужение к кончику
+      const z=0.10*t*t;                   // лёгкий постоянный изгиб вперёд
+      pos.push(-w, t, z,  w, t, z);
+    }
+    for(let i=0;i<SEG;i++){
+      const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3;
+      idx.push(a,b,c,  c,b,d);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    g.setIndex(idx);
+    return g;
+  }
+
+  const FIELD_X=17, FIELD_Z=9;   // широкое, но НЕглубокое поле (приём Dasha) — нет далёкого горизонта
+  function buildField(count){
+    if(field){ scene.remove(field); field.geometry.dispose(); }
+    const g=bladeGeometry();
+    const mat=new THREE.ShaderMaterial({ vertexShader:VERT, fragmentShader:FRAG, uniforms, side:THREE.DoubleSide });
+    field=new THREE.InstancedMesh(g, mat, count);
+    field.frustumCulled=false;
+
+    const phase=new Float32Array(count), tint=new Float32Array(count);
+    const m=new THREE.Matrix4(), q=new THREE.Quaternion(), up=new THREE.Vector3(0,1,0);
+    const p=new THREE.Vector3(), s=new THREE.Vector3();
+    for(let i=0;i<count;i++){
+      const x=(Math.random()-0.5)*FIELD_X;
+      const z=(Math.random()-0.5)*FIELD_Z;          // неглубокая полоса у камеры
+      const hgt=U.height*(0.6+0.6*Math.random());
+      q.setFromAxisAngle(up, Math.random()*Math.PI*2);
+      p.set(x,0,z); s.set(1,hgt,1);
+      m.compose(p,q,s);
+      field.setMatrixAt(i,m);
+      phase[i]=Math.random()*Math.PI*2;
+      tint[i]=Math.random();
+    }
+    field.instanceMatrix.needsUpdate=true;
+    g.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phase,1));
+    g.setAttribute('aTint',  new THREE.InstancedBufferAttribute(tint,1));
+    scene.add(field);
+  }
+
+  /* --- сцена --------------------------------------------------------------- */
+  function init(){
+    renderer=new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+    scene=new THREE.Scene();
+    scene.fog=new THREE.Fog(new THREE.Color('#dfe8d6'), 16, 40);   // глубина: даль тает в небо
+
+    // камера как у Dasha: смотрим слегка вниз на неглубокую полосу травы
+    camera=new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 2.4, 6);
+    camera.lookAt(0, 0.6, 0);
+
+    // ни 3D-неба, ни земли-меша: фон даёт CSS-градиент, трава рисуется поверх (renderer alpha)
+
+    buildField(U.density);
+    resize();
+    window.addEventListener('resize', resize);
+    animate();
+  }
+
+  function resize(){
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    renderer.setSize(w,h,false);
+    camera.aspect=w/Math.max(h,1); camera.updateProjectionMatrix();
+  }
+
+  /* --- курсор → точка на земле (raycast) → следы-шаги ---------------------- */
+  const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(-2,-2);
+  const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+  const hit=new THREE.Vector3();
+  let haveMouse=false;
+  canvas.addEventListener('pointermove',(e)=>{
+    const r=canvas.getBoundingClientRect();
+    ndc.x=((e.clientX-r.left)/r.width)*2-1;
+    ndc.y=-((e.clientY-r.top)/r.height)*2+1;
+    haveMouse=true;
+  });
+  canvas.addEventListener('pointerleave',()=> haveMouse=false);
+
+  // кольцевой буфер следов
+  const steps=[];                 // {x,z,dx,dz,t}
+  let lastStep=null, side=1;
+  const STRIDE=0.55, STEP_OFF=0.22;
+  function spawnStep(px,pz,dx,dz){
+    const perpx=-dz, perpz=dx;
+    steps.push({ x:px+perpx*STEP_OFF*side, z:pz+perpz*STEP_OFF*side, dx, dz, t:uniforms.uTime.value });
+    side*=-1;
+    if(steps.length>MAXSTEPS) steps.shift();
+  }
+  function uploadSteps(){
+    uniforms.uStepCount.value=steps.length;
+    for(let i=0;i<steps.length;i++){ const s=steps[i]; stepA[i].set(s.x,s.z,s.dx,s.dz); stepT[i]=s.t; }
+  }
+
+  let acc=0, frames=0;
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05);
+    uniforms.uTime.value+=dt;
+    gust=Math.max(0, gust - dt*0.6);                 // порыв плавно затухает
+    uniforms.uWind.value = U.wind + gust*0.9;
+
+    if(haveMouse){
+      ray.setFromCamera(ndc, camera);
+      if(ray.ray.intersectPlane(groundPlane, hit)){
+        if(!lastStep){ lastStep={x:hit.x,z:hit.z}; }
+        else {
+          const dx=hit.x-lastStep.x, dz=hit.z-lastStep.z;
+          const dist=Math.hypot(dx,dz);
+          if(dist>=STRIDE){
+            spawnStep(hit.x, hit.z, dx/dist, dz/dist);
+            lastStep.x=hit.x; lastStep.z=hit.z;
+          }
+        }
+      }
+    }
+    uploadSteps();
+
+    renderer.render(scene, camera);
+  }
+
+  /* --- контролы карточки: только ветер + порыв ----------------------------- */
+  let gust=0;
+  const windEl=el('wind'), windVal=el('windVal');
+  windEl.value=U.wind; windVal.textContent=U.wind.toFixed(2);
+  windEl.oninput=()=>{ U.wind=parseFloat(windEl.value); windVal.textContent=U.wind.toFixed(2); };
+  el('gust').onclick=()=>{ gust=1.0; };
+
+  try { init(); }
+  catch(e){ fail('Ошибка инициализации: '+e.message); }
+})();
+</script>
+<script>
+(function(){ var q=new URLSearchParams(location.search);
+  if(q.has('embed')){ var e=document.querySelector('.back'); if(e)e.remove(); }
+  var b=document.querySelector('.back');
+  if(b && !matchMedia('(prefers-reduced-motion: reduce)').matches){ b.addEventListener('click',function(ev){ ev.preventDefault(); document.body.classList.add('leaving'); setTimeout(function(){ location.href=b.getAttribute('href'); },175); }); }
+})();
+</script>
+</body>
+</html>
