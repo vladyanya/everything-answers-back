@@ -245,6 +245,8 @@ function add(){
 function flashJack(){ jackEl.style.transition='none'; jackEl.style.opacity='1'; jackEl.style.transform='scale(1.05)';
   requestAnimationFrame(()=>{ jackEl.style.transition='opacity .9s, transform .9s'; jackEl.style.opacity='0'; jackEl.style.transform='scale(1.45)'; }); }
 addBtn.addEventListener('click', add);
+/* тап по самому кошельку — главный жест («tap and make a wish» обещает именно это) */
+canvas.addEventListener('pointerdown', add);
 document.getElementById('reset').onclick=()=>{ balance=0; heat=0; taps=0; wealth=0; wishEl.textContent='tap and make a wish'; notesEl.innerHTML=''; };
 // цвет развивается и от числа тапов (каждый Add Money двигает), и от суммы (крупные деньги докрашивают до пика)
 const wealthTarget=()=>{
@@ -253,6 +255,7 @@ const wealthTarget=()=>{
   return Math.max(tapCurve*0.9, balCurve);                                  // финальный «пик» — за большие деньги
 };
 
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last=performance.now();
 function frame(now){
   const dt=Math.min((now-last)/1000,0.05); last=now;
@@ -262,7 +265,7 @@ function frame(now){
   if(Math.abs(balance-shown)<1) shown=balance;
   balEl.textContent=fmt(shown);
   gl.uniform2f(L('u_res'),canvas.width,canvas.height);
-  gl.uniform1f(L('u_time'),now/1000);
+  gl.uniform1f(L('u_time'), reduceMotion?9.0:now/1000);   /* reduce: течение статично, цвет богатства работает */
   gl.uniform1f(L('u_heat'),heat);
   gl.uniform1f(L('u_wealth'),wealth);
   gl.drawArrays(gl.TRIANGLES,0,3);

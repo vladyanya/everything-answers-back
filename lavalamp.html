@@ -197,6 +197,7 @@ document.getElementById('bloop').onclick=()=>{
   if(bubbles.length<6) bubbles.push({x:0.25+Math.random()*0.5, y:-0.03, vy:0.05+Math.random()*0.04, r:0.075+Math.random()*0.03});
 };
 
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const bubBuf=new Float32Array(18);
 let last=performance.now();
 function frame(now){
@@ -209,7 +210,7 @@ function frame(now){
   for(let i=0;i<Math.min(bubbles.length,6);i++){ bubBuf[i*3]=bubbles[i].x; bubBuf[i*3+1]=bubbles[i].y; bubBuf[i*3+2]=bubbles[i].r; }
 
   gl.uniform2f(L('u_res'),canvas.width,canvas.height);
-  gl.uniform1f(L('u_time'),now/1000);
+  gl.uniform1f(L('u_time'), reduceMotion?20.0:now/1000);   /* reduce: воск статичен, нагрев и пузыри — от действий */
   gl.uniform1f(L('u_heat'),heat);
   gl.uniform2f(L('u_p'),ptr.x,ptr.y);
   gl.uniform1f(L('u_pIn'),ptr.inside?1:0);

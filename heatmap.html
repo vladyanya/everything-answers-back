@@ -239,6 +239,7 @@ const flowEl=document.getElementById('flow'), flowVal=document.getElementById('f
 flowEl.oninput=()=>{ flow=parseFloat(flowEl.value); flowVal.textContent=Math.round(flow*100)+'%'; };
 document.getElementById('cool').onclick=()=>{ coolPending=true; };
 
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const L=(p,n)=>gl.getUniformLocation(p,n);
 let last=performance.now();
 function frame(now){
@@ -265,7 +266,7 @@ function frame(now){
   gl.useProgram(progRender); gl.bindFramebuffer(gl.FRAMEBUFFER,null); gl.viewport(0,0,canvas.width,canvas.height);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,read.tex);
   gl.uniform1i(L(progRender,'u_state'),0); gl.uniform2f(L(progRender,'u_res'),canvas.width,canvas.height);
-  gl.uniform1f(L(progRender,'u_time'),now/1000);
+  gl.uniform1f(L(progRender,'u_time'), reduceMotion?10.0:now/1000);   /* reduce: фон статичен, тепло от касания живёт */
   gl.uniform1f(L(progRender,'u_flow'), 0.05 + flow*0.45);
   gl.drawArrays(gl.TRIANGLES,0,3);
   requestAnimationFrame(frame);

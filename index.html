@@ -8,7 +8,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vladislav — Elements that answer you</title>
+<title>Everything here answers back — Vladislav Chumachenko</title>
+<meta name="description" content="Interactive WebGL shader gallery — six little elements you can touch, and each one responds. Designed and coded from scratch by Vladislav Chumachenko.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234fd4e8'/%3E%3Cstop offset='.5' stop-color='%23a04ae0'/%3E%3Cstop offset='1' stop-color='%23ffb84a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='4' width='56' height='56' rx='16' fill='%23050506'/%3E%3Crect x='13' y='13' width='38' height='38' rx='11' fill='none' stroke='url(%23g)' stroke-width='5'/%3E%3C/svg%3E">
+<meta property="og:title" content="Everything here answers back">
+<meta property="og:description" content="Touchable WebGL elements — hand-written GLSL, and each one answers back.">
+<meta property="og:image" content="https://everything-answers-back.netlify.app/og.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://everything-answers-back.netlify.app/">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
     --bg:#050506; --ink:#f2f3f6; --dim:#8b8f99; --line:#20222a;
@@ -30,6 +38,7 @@
   /* --- герой (минимальный) --- */
   .hero{ margin:0 0 42px; }
   .hero h1{ font-size:clamp(26px,4vw,40px); line-height:1.06; letter-spacing:-.025em; font-weight:600; margin:0; color:var(--ink); }
+  .hero p{ margin:10px 0 0; font:13px/1.5 var(--mono); letter-spacing:.03em; color:var(--dim); }
 
   /* --- сетка карточек --- */
   .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
@@ -119,6 +128,7 @@
 
   <div class="hero">
     <h1>Everything here answers back.</h1>
+    <p>Touchable WebGL elements — hand-written GLSL, each a single file.</p>
   </div>
 
   <div class="grid" id="grid">
@@ -126,6 +136,12 @@
       <canvas data-mode="0"></canvas>
       <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
       <div class="meta"><h3>Water</h3></div>
+    </a>
+
+    <a class="card" href="./prism.html">
+      <canvas data-mode="6"></canvas>
+      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
+      <div class="meta"><h3>Prism</h3></div>
     </a>
 
     <a class="card" href="./clouds.html">
@@ -163,7 +179,7 @@
   <div id="cursor"></div>
 
   <div class="foot">
-    <span>Vladislav Chumachenko · shaders</span>
+    <span>Vladislav Chumachenko</span>
     <a href="https://github.com/vladyanya" target="_blank" rel="noopener">github ↗</a>
   </div>
 </div>
@@ -217,6 +233,13 @@ vec3 firePal(float t){ t=clamp(t,0.,1.); vec3 c=vec3(0.0);
   c=mix(c,vec3(0.52,0.03,0.0),smoothstep(0.04,0.28,t)); c=mix(c,vec3(0.96,0.26,0.02),smoothstep(0.28,0.5,t));
   c=mix(c,vec3(1.0,0.62,0.06),smoothstep(0.5,0.72,t));  c=mix(c,vec3(1.0,0.9,0.42),smoothstep(0.72,0.9,t));
   c=mix(c,vec3(1.0,1.0,0.92),smoothstep(0.9,1.0,t)); return c; }
+// ramp призмы: индиго → фиолет → маджента → коралл → оранж → золото
+vec3 prismRamp(float x){ x=clamp(x,0.,1.);
+  vec3 c=vec3(0.03,0.02,0.12);
+  c=mix(c,vec3(0.16,0.20,0.78),smoothstep(0.00,0.20,x)); c=mix(c,vec3(0.48,0.26,0.90),smoothstep(0.20,0.38,x));
+  c=mix(c,vec3(0.85,0.28,0.68),smoothstep(0.38,0.55,x)); c=mix(c,vec3(0.95,0.38,0.36),smoothstep(0.55,0.70,x));
+  c=mix(c,vec3(0.98,0.60,0.20),smoothstep(0.70,0.85,x)); c=mix(c,vec3(1.00,0.85,0.48),smoothstep(0.85,1.00,x));
+  return c*c; }
 
 void main(){
   vec2 uv=gl_FragCoord.xy/u_res;
@@ -257,6 +280,21 @@ void main(){
     float base=bands(q*0.85+vec2(tt*0.3,0.0));
     base=clamp((base-0.52)*1.7+0.5, 0.0, 1.0);
     col=pal(base);
+  } else if(u_mode==6){                  // PRISM: ромбик, тепловой контур, бегущий свет с хвостом
+    vec2 rp = mat2(0.70710678,-0.70710678,0.70710678,0.70710678)*p;
+    vec2 qq = abs(rp) - 0.21 + 0.065;
+    float d = length(max(qq,0.)) + min(max(qq.x,qq.y),0.) - 0.065;
+    float phi = atan(p.y,p.x);
+    float s6 = mod(phi + t*0.85, 6.28318);
+    float behind = min(s6, 6.28318 - s6);
+    float run = exp(-behind*behind*7.0);
+    float tail = exp(-s6*1.25) * smoothstep(0.0,0.30,s6);
+    float contour = exp(-abs(d)*20.0);
+    float heat = contour*(0.32 + 0.95*run)
+               + smoothstep(0.008,-0.02,d)*(0.34 - clamp(-d*3.5,0.,1.)*0.24);
+    vec3 cl = prismRamp(clamp(heat,0.,1.));
+    cl += vec3(1.05,0.80,0.45)*(0.5+0.5*run)*tail*contour*0.9;   // дисперсионный хвост (упрощённо)
+    col = sqrt(max(cl, vec3(0.0)));                              // linear → display
   } else {                               // LAVA: восковые метаболы + мелкие капли на чёрном
     float asp=u_res.x/u_res.y; vec2 pl=vec2(uv.x*asp, uv.y);
     float tt=t*0.28;
@@ -305,6 +343,7 @@ const PALETTE = {
   3:[[0.160,0.420,0.980],[1.000,0.780,0.300]],   // wallet: свои цвета в шейдере (эти не используются)
   4:[[0.050,0.030,0.180],[1.000,0.500,0.140]],   // heatmap: своя палитра в шейдере (эти не используются)
   5:[[0.030,0.010,0.000],[1.000,0.620,0.060]],   // fire: своя палитра в шейдере (эти не используются)
+  6:[[0.030,0.020,0.120],[1.000,0.850,0.480]],   // prism: своя палитра в шейдере (эти не используются)
 };
 
 const errEl=document.getElementById('err');
@@ -340,8 +379,12 @@ document.querySelectorAll('.card canvas').forEach(cv=>{
 });
 let visible=true;
 document.addEventListener('visibilitychange',()=> visible=!document.hidden);
-function loop(now){ if(visible){ const t=now/1000; for(const s of shaders) s.draw(t); } requestAnimationFrame(loop); }
+/* reduce: превью — статичные кадры (один прогон + перерисовка на ресайз), без вечного цикла */
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){ if(visible){ const t=reduce?6.0:now/1000; for(const s of shaders) s.draw(t); }
+  if(!reduce) requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
+if(reduce) addEventListener('resize', ()=>requestAnimationFrame(loop));
 
 // «Soon» карточки не переходят
 document.querySelectorAll('.card[data-soon]').forEach(a=> a.addEventListener('click',e=>e.preventDefault()));
@@ -352,8 +395,10 @@ document.querySelectorAll('.card[data-soon]').forEach(a=> a.addEventListener('cl
 const TILT=9;
 function spring(p,v,t,dt,k,d){ const a=k*(t-p)-d*v; v+=a*dt; p+=v*dt; return [p,v]; }
 
-// tilt — только для мыши на широком экране; проверяем ЖИВЬЁМ каждый кадр (устойчиво к ресайзу)
-const tiltMQ = window.matchMedia('(hover:hover) and (pointer:fine) and (min-width:761px)');
+// tilt — только для мыши на широком экране и без reduced-motion; проверяем ЖИВЬЁМ каждый кадр
+const tiltBase = window.matchMedia('(hover:hover) and (pointer:fine) and (min-width:761px)');
+const tiltMQ = { get matches(){ return tiltBase.matches && !reduce; },
+  addEventListener:(t,f)=>tiltBase.addEventListener(t,f), addListener:(f)=>tiltBase.addListener&&tiltBase.addListener(f) };
 function syncNoTilt(){ document.body.classList.toggle('no-tilt', !tiltMQ.matches); }
 syncNoTilt();
 if(tiltMQ.addEventListener) tiltMQ.addEventListener('change', syncNoTilt); else tiltMQ.addListener(syncNoTilt);
@@ -390,8 +435,8 @@ document.querySelectorAll('.card').forEach(card=>{
   })(performance.now());
 });
 
-/* Клик по карточке → короткий fade-out галереи, затем переход (карточка-страница делает fade-in на загрузке). */
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Клик по карточке → короткий fade-out галереи, затем переход (карточка-страница делает fade-in на загрузке).
+   reduce объявлен выше (превью). */
 const allCards=[...document.querySelectorAll('.card')];
 document.querySelectorAll('.card').forEach(card=>{
   card.addEventListener('click',e=>{

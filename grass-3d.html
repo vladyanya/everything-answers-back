@@ -97,6 +97,7 @@
   if (typeof THREE==='undefined'){ fail('three.js не подгрузился.'); return; }
 
   const canvas=el('c');
+  const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let renderer, scene, camera, field, ground;
   const clock=new THREE.Clock();
 
@@ -346,7 +347,8 @@
     const dt=Math.min(clock.getDelta(),0.05);
     uniforms.uTime.value+=dt;
     gust=Math.max(0, gust - dt*0.6);                 // порыв плавно затухает
-    uniforms.uWind.value = U.wind + gust*0.9;
+    /* reduce: трава не колышется сама; следы-шаги (от пользователя) работают */
+    uniforms.uWind.value = reduceMotion ? 0 : U.wind + gust*0.9;
 
     if(haveMouse){
       ray.setFromCamera(ndc, camera);

@@ -87,7 +87,7 @@
 
 <script>
 /* Дрейфующие кучевые облака: fbm + домен-варп. Слайдер — сила ветра (скорость + облачность).
-   Курсор раздувает облака, кнопка — резкий порыв. Один фрагментный проход, без зависимостей. */
+   Курсор — «дыхание»: расталкивает и разрежает облака вокруг себя. Кнопка — новое небо. */
 (function(){
 const canvas=document.getElementById('c');
 const errBox=document.getElementById('err');
@@ -104,6 +104,8 @@ uniform vec2  u_res;
 uniform float u_time;
 uniform float u_wind;     // 0..1 — скорость дрейфа
 uniform vec2  u_seed;     // смещение поля → «новое небо» по кнопке
+uniform vec2  u_p;        // курсор 0..1 (uv)
+uniform float u_blow;     // сила «дыхания» (ease в JS)
 out vec4 fragColor;
 
 float hash(vec2 p){ p=fract(p*vec2(127.1,311.7)); p+=dot(p,p+34.5); return fract(p.x*p.y); }
@@ -134,13 +136,20 @@ void main(){
   vec3 top=vec3(0.16,0.47,0.86), hor=vec3(0.74,0.86,0.97);
   vec3 col=mix(hor, top, smoothstep(0.0,1.0,uv.y));
 
+  // «дыхание»: курсор расталкивает облачное поле от себя
+  vec2 duv = uv - u_p; duv.x *= asp;
+  float d2 = dot(duv, duv);
+  float bl = u_blow * exp(-d2*20.0);
+  vec2 buv = uv + (duv / max(sqrt(d2), 1e-3)) * bl * 0.075;
+
   // координата облачного поля; x чуть сжат (уже) → облака не «горизонтальные»
   float speed = 0.012 + u_wind*0.10;
-  vec2 p = vec2(uv.x*asp*1.15, uv.y) * 4.5 + vec2(u_time*speed*4.5, 0.0) + u_seed;
+  vec2 p = vec2(buv.x*asp*1.15, buv.y) * 4.5 + vec2(u_time*speed*4.5, 0.0) + u_seed;
 
   // плотность (крупные массы + мелкие кучки) и её «объём»
   float e = 0.03;
   float D  = cloudD(p);
+  D *= 1.0 - 0.55*u_blow*exp(-d2*13.0);   // облака редеют под дыханием
   float Dx = cloudD(p + vec2(e,0.)) - D;
   float Dy = cloudD(p + vec2(0.,e)) - D;
   vec3 n = normalize(vec3(-Dx, -Dy, 0.6));
@@ -182,9 +191,12 @@ function resize(){ const dpr=Math.min(devicePixelRatio||1,2);
   if(canvas.width!==w||canvas.height!==h){ canvas.width=w; canvas.height=h; gl.viewport(0,0,w,h); } }
 new ResizeObserver(resize).observe(canvas); resize();
 
-const ptr={x:0.5,y:0.6};
+const ptr={x:0.5,y:0.6,inside:false};
 canvas.addEventListener('pointermove',e=>{ const r=canvas.getBoundingClientRect();
-  ptr.x=(e.clientX-r.left)/r.width; ptr.y=1-(e.clientY-r.top)/r.height; });
+  ptr.x=(e.clientX-r.left)/r.width; ptr.y=1-(e.clientY-r.top)/r.height; ptr.inside=true; });
+canvas.addEventListener('pointerdown',e=>{ const r=canvas.getBoundingClientRect();
+  ptr.x=(e.clientX-r.left)/r.width; ptr.y=1-(e.clientY-r.top)/r.height; ptr.inside=true; });
+canvas.addEventListener('pointerleave',()=> ptr.inside=false);
 
 let wind=0.35;
 const windEl=document.getElementById('wind'), windVal=document.getElementById('windVal');
@@ -194,15 +206,20 @@ windEl.oninput=()=>{ wind=parseFloat(windEl.value); windVal.textContent=Math.rou
 const seed={x:0,y:0}, seedT={x:0,y:0};
 document.getElementById('gust').onclick=()=>{ seedT.x=Math.random()*120-60; seedT.y=Math.random()*120-60; };
 
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let blow=0;
 let last=performance.now();
 function frame(now){
   const dt=Math.min((now-last)/1000,0.05); last=now;
   const k=Math.min(dt*1.4, 1.0);                     // плавный переход к новому небу
   seed.x+=(seedT.x-seed.x)*k; seed.y+=(seedT.y-seed.y)*k;
+  blow += ((ptr.inside?1:0)-blow)*Math.min(dt*3.5,1);   // дыхание плавно набирает/спадает
   gl.uniform2f(L('u_res'),canvas.width,canvas.height);
-  gl.uniform1f(L('u_time'),now/1000);
+  gl.uniform1f(L('u_time'), reduceMotion?7.0:now/1000);   /* reduce: небо статично, дыхание работает */
   gl.uniform1f(L('u_wind'),wind);
   gl.uniform2f(L('u_seed'),seed.x,seed.y);
+  gl.uniform2f(L('u_p'),ptr.x,ptr.y);
+  gl.uniform1f(L('u_blow'),blow);
   gl.drawArrays(gl.TRIANGLES,0,3);
   requestAnimationFrame(frame);
 }

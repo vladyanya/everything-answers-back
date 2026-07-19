@@ -1,6 +1,6 @@
 # Everything here answers back
 
-Interactive WebGL shader gallery — six little "elements" you can touch, and each one responds.
+Interactive WebGL shader gallery — little "elements" you can touch, and each one responds.
 
 **Author:** Vladislav Chumachenko · designed and coded from scratch · [github.com/vladyanya](https://github.com/vladyanya)
 
@@ -13,6 +13,7 @@ Live: https://everything-answers-back.netlify.app
 | Card | What it does | Verb |
 | --- | --- | --- |
 | **Water** | Pool surface — touch it, ripples catch the light (wave-equation sim + caustics) | touch |
+| **Prism** | A diamond of glass — white light runs the rim and splits into a spectrum; tap and the shape rings | tap |
 | **Sky** | Cumulus clouds drift and morph; blow the wind | blow |
 | **Grass** | 3D field you can walk through, footprints spring back (three.js) | walk |
 | **Wallet** | Tap to receive random money; the gradient warms toward gold as you get richer | tap |
@@ -34,6 +35,7 @@ Click a card → it opens the full interactive element (soft cross-fade). Everyt
 ```
 index.html        — landing gallery (live shader previews + tilt/press + fade transition)
 card-water.html   — Water
+prism.html        — Prism
 clouds.html       — Sky
 grass-3d.html     — Grass
 motherlode.html   — Wallet
