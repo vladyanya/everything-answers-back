@@ -4,7 +4,7 @@ Interactive WebGL shader gallery — little "elements" you can touch, and each o
 
 **Author:** Vladislav Chumachenko · designed and coded from scratch · [github.com/vladyanya](https://github.com/vladyanya)
 
-Live: https://everything-answers-back.netlify.app
+Live: https://vladyanya.github.io/everything-answers-back/
 
 ---
 
