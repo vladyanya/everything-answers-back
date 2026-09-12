@@ -1,49 +1,60 @@
 # Everything here answers back
 
-Interactive WebGL shader gallery — little "elements" you can touch, and each one responds.
+Seven interactive elements, hand-written in WebGL. Each one reacts to touch and keeps reacting after you let go.
 
-**Author:** Vladislav Chumachenko · designed and coded from scratch · [github.com/vladyanya](https://github.com/vladyanya)
+**[Open the gallery →](https://vladyanya.github.io/everything-answers-back/)**
 
-Live: https://vladyanya.github.io/everything-answers-back/
-
----
+Designed and coded from scratch by Vladislav Chumachenko · [github.com/vladyanya](https://github.com/vladyanya)
 
 ## The elements
 
-| Card | What it does | Verb |
-| --- | --- | --- |
-| **Water** | Pool surface — touch it, ripples catch the light (wave-equation sim + caustics) | touch |
-| **Prism** | A diamond of glass — white light runs the rim and splits into a spectrum; tap and the shape rings | tap |
-| **Sky** | Cumulus clouds drift and morph; blow the wind | blow |
-| **Grass** | 3D field you can walk through, footprints spring back (three.js) | walk |
-| **Wallet** | Tap to receive random money; the gradient warms toward gold as you get richer | tap |
-| **Warm** | A living thermal surface; move across it and heat blooms and fades | move |
-| **Lava** | Molten wax blobs rise, split and merge; touch to heat, tap to release a bubble | touch |
+| | You do | It answers | Open |
+| --- | --- | --- | --- |
+| **Water** | touch the pool surface | ripples spread by a wave-equation sim, light catches the caustics | [↗](https://vladyanya.github.io/everything-answers-back/card-water.html) |
+| **Prism** | tap the glass | white light runs the rim, splits into a spectrum, and the shape rings | [↗](https://vladyanya.github.io/everything-answers-back/prism.html) |
+| **Sky** | blow the wind | cumulus clouds drift and morph along the gust | [↗](https://vladyanya.github.io/everything-answers-back/clouds.html) |
+| **Grass** | walk through the field | blades bend under the step and spring back | [↗](https://vladyanya.github.io/everything-answers-back/grass-3d.html) |
+| **Wallet** | tap to receive money | the sum is random, the gradient warms toward gold as you get richer | [↗](https://vladyanya.github.io/everything-answers-back/motherlode.html) |
+| **Warm** | move across the surface | heat blooms behind the pointer and fades by diffusion | [↗](https://vladyanya.github.io/everything-answers-back/heatmap.html) |
+| **Lava** | touch to heat, tap to release a bubble | molten blobs rise, split and merge | [↗](https://vladyanya.github.io/everything-answers-back/lavalamp.html) |
 
-Click a card → it opens the full interactive element (soft cross-fade). Everything is a single, self-contained HTML file that runs by double-click — no build step, no dependencies except three.js for the grass.
+The gallery runs a live preview of every element on its card. Click a card and the full element opens through a soft cross-fade.
 
-## Tech
+## How it is built
 
-- WebGL2 · GLSL ES 3.00 fragment shaders, fullscreen-triangle pipeline
-- Ping-pong float textures (RGBA16F) for the physical sims — wave equation (Water), heat diffusion (Warm), FBO fallback to RGBA8
-- Procedural noise / fbm / domain warping / metaballs / mesh gradients
-- three.js r128 (InstancedMesh) for the 3D grass
-- Motion follows productive-animation principles: short opacity transitions, `prefers-reduced-motion` respected, only `transform`/`opacity` animated
+Every element is one self-contained HTML file. Open it by double-click and it runs: no build step, no bundler, no dependencies, except three.js on a CDN for the grass.
 
-## Structure
+- **Rendering.** WebGL2, GLSL ES 3.00 fragment shaders, fullscreen-triangle pipeline.
+- **Physics.** Ping-pong float textures (RGBA16F, with an RGBA8 fallback when the FBO is unavailable) carry the state between frames: the wave equation in Water, heat diffusion in Warm.
+- **Procedural work.** Noise, fbm, domain warping, metaballs, mesh gradients.
+- **3D.** three.js r128 with `InstancedMesh` for the grass field.
+- **Motion.** Only `transform` and `opacity` are animated, transitions stay short, and `prefers-reduced-motion` turns the decorative motion off.
+
+## Files
 
 ```
-index.html        — landing gallery (live shader previews + tilt/press + fade transition)
-card-water.html   — Water
-prism.html        — Prism
-clouds.html       — Sky
-grass-3d.html     — Grass
-motherlode.html   — Wallet
-heatmap.html      — Warm
-lavalamp.html     — Lava
-LICENSE           — MIT
+index.html         gallery: live previews, card tilt and press, fade transition
+card-water.html    Water
+prism.html         Prism
+clouds.html        Sky
+grass-3d.html      Grass
+motherlode.html    Wallet
+heatmap.html       Warm
+lavalamp.html      Lava
+og.png             social preview
+LICENSE            MIT
 ```
 
-## Using this
+## Run it locally
 
-Licensed under **MIT** — you're free to use, study, modify and share it. The one ask: **keep the copyright notice** (`© 2026 Vladislav Chumachenko`) in copies, so authorship stays attached to the work. If you build on it, a link back is appreciated.
+```bash
+git clone https://github.com/vladyanya/everything-answers-back.git
+cd everything-answers-back
+open index.html
+```
+
+Any modern browser with WebGL2 will do. No server is required, the files run straight from disk.
+
+## License
+
+MIT, so you are free to use, study, modify and share this. One ask: keep the copyright notice (`© 2026 Vladislav Chumachenko`) in copies, so authorship stays attached to the work. A link back is appreciated when you build on it.
