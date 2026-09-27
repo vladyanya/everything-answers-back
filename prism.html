@@ -288,6 +288,7 @@ resize(); requestAnimationFrame(frame);
 (function(){ var q=new URLSearchParams(location.search);
   if(q.has('embed')){ var e=document.querySelector('.back'); if(e)e.remove(); }
   var b=document.querySelector('.back');
+  var from=q.get('from'); if(b && from && /^[\w-]+\.html(#[\w-]*)?$/.test(from)) b.setAttribute('href','./'+from);   // вернуться туда, откуда пришли (стенд)
   if(b && !matchMedia('(prefers-reduced-motion: reduce)').matches){ b.addEventListener('click',function(ev){ ev.preventDefault(); document.body.classList.add('leaving'); setTimeout(function(){ location.href=b.getAttribute('href'); },175); }); }
 })();
 </script>

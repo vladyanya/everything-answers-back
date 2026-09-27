@@ -9,7 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Everything here answers back — Vladislav Chumachenko</title>
-<meta name="description" content="Interactive WebGL shader gallery — six little elements you can touch, and each one responds. Designed and coded from scratch by Vladislav Chumachenko.">
+<meta name="description" content="Interactive WebGL shader gallery — seven little elements you can touch, and each one responds. Designed and coded from scratch by Vladislav Chumachenko.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234fd4e8'/%3E%3Cstop offset='.5' stop-color='%23a04ae0'/%3E%3Cstop offset='1' stop-color='%23ffb84a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='4' width='56' height='56' rx='16' fill='%23050506'/%3E%3Crect x='13' y='13' width='38' height='38' rx='11' fill='none' stroke='url(%23g)' stroke-width='5'/%3E%3C/svg%3E">
 <meta property="og:title" content="Everything here answers back">
 <meta property="og:description" content="Touchable WebGL elements — hand-written GLSL, and each one answers back.">
@@ -19,103 +19,62 @@
 <meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
-    --bg:#050506; --ink:#f2f3f6; --dim:#8b8f99; --line:#20222a;
+    --bg:#050506; --ink:#f2f3f6; --dim:#8b8f99; --off:#5a5e68; --line:rgba(255,255,255,.08);
     --mono:"SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
     --ease:cubic-bezier(.2,0,0,1);
   }
   *{ box-sizing:border-box; }
-  html,body{ height:100%; }
+  html,body{ margin:0; }
   body{
-    margin:0; background:
-      radial-gradient(120% 80% at 50% -10%, #14161d 0%, #050506 60%) fixed,
-      #050506;
-    color:var(--ink);
-    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
     -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
   }
-  .wrap{ max-width:1080px; margin:0 auto; padding:44px 24px 80px; }
-
-  /* --- герой (минимальный) --- */
-  .hero{ margin:0 0 42px; }
-  .hero h1{ font-size:clamp(26px,4vw,40px); line-height:1.06; letter-spacing:-.025em; font-weight:600; margin:0; color:var(--ink); }
-  .hero p{ margin:10px 0 0; font:13px/1.5 var(--mono); letter-spacing:.03em; color:var(--dim); }
-
-  /* --- сетка карточек --- */
-  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-  /* мобилка: не простыня вниз, а горизонтальный скролл вправо-влево */
-  @media (max-width:760px){
-    .grid{ display:flex; grid-template-columns:none; gap:14px;
-      overflow-x:auto; overflow-y:hidden; scroll-snap-type:none;
-      -webkit-overflow-scrolling:touch; scrollbar-width:none;
-      padding:4px 20px 18px; margin:0 -24px; }
-    .grid::-webkit-scrollbar{ display:none; }
-    /* карточки помещаются по высоте → скролл естественно горизонтальный */
-    .card{ flex:0 0 82%; aspect-ratio:auto; height:min(64vh,540px); }
-  }
-
-  .card{
-    position:relative; display:block; text-decoration:none; color:inherit;
-    aspect-ratio:4/5; border-radius:30px; overflow:hidden; isolation:isolate;
-    background:#0a0b0e; cursor:pointer; transform-style:preserve-3d; will-change:transform;
-    box-shadow:0 20px 50px rgba(0,0,0,.5), 0 2px 0 rgba(255,255,255,.04) inset;
-    transition:box-shadow .3s;   /* трансформ анимируется в JS (демпфирование) */
-  }
-  .card:hover{ box-shadow:0 34px 70px rgba(0,0,0,.6); }
-  /* мягкий press там, где нет 3D-tilt (тач/узкий режим): утапливается и пружинит назад */
-  body.no-tilt .card{ transition:transform .26s cubic-bezier(.34,1.56,.64,1); will-change:transform; }
-  body.no-tilt .card:active{ transform:scale(.955); transition:transform .09s ease-out; }
-  .card canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .card .sheen{ display:none; }   /* старый ring-через-градиент убран → глобальный курсор ниже */
-  /* глобальный тёмный кружок-курсор: следует за мышью через transform (композитинг GPU, без перерисовок) */
-  #cursor{ position:fixed; left:0; top:0; z-index:60; width:36px; height:36px; margin:-18px 0 0 -18px;
-    border-radius:50%; pointer-events:none; opacity:0; transition:opacity .18s ease; will-change:transform;
-    background:radial-gradient(circle, rgba(0,0,0,.5) 0%, rgba(0,0,0,.28) 45%, rgba(0,0,0,0) 72%); }
-  #cursor.show{ opacity:1; }
-  /* прячем системный курсор в области галереи (любая мышь) — рисуем свой */
-  @media (hover:hover) and (pointer:fine){ .grid, .card{ cursor:none; } }
-
-  /* inner shadow / стеклянный ободок — то самое «потрясно» */
-  .card .depth{
-    position:absolute; inset:0; pointer-events:none; border-radius:inherit;
-    box-shadow:
-      inset 0 0 60px 18px rgba(0,0,0,.45),      /* мягкая тень внутрь по краям */
-      inset 0 1px 0 rgba(255,255,255,.22),      /* верхний светлый ободок */
-      inset 0 0 0 1px rgba(255,255,255,.06);
-  }
-  /* скрим под текстом — читаемость белого на любой стихии */
-  .card .scrim{
-    position:absolute; inset:0; pointer-events:none; border-radius:inherit;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,.30) 0%, rgba(0,0,0,0) 22%),
-      linear-gradient(0deg, rgba(0,0,0,.66) 0%, rgba(0,0,0,.26) 20%, rgba(0,0,0,0) 46%);
-  }
-  .card .tag{
-    position:absolute; left:16px; top:15px; z-index:2;
-    font:11px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase;
-    color:#fff; text-shadow:0 1px 8px rgba(0,0,0,.5);
-    display:flex; align-items:center; gap:7px;
-  }
-  .card .tag .sq{ width:7px; height:7px; border-radius:2px; background:currentColor; }
-  .card .meta{ position:absolute; left:16px; right:16px; bottom:16px; z-index:2; text-shadow:0 1px 10px rgba(0,0,0,.5); }
-  .card .meta h3{ margin:0 0 3px; font-size:19px; font-weight:600; letter-spacing:-.01em; color:#fff; }
-  .card .meta p{ margin:0; font-size:12.5px; color:rgba(255,255,255,.82); }
-  .card .arrow{
-    position:absolute; right:14px; bottom:14px; z-index:2; width:34px; height:34px; border-radius:50%;
-    background:rgba(255,255,255,.16); backdrop-filter:blur(6px);
-    display:flex; align-items:center; justify-content:center; color:#fff;
-    transition:background .2s, transform .2s;
-  }
-  .card:hover .arrow{ background:rgba(255,255,255,.28); transform:translate(2px,-2px); }
-  .card .soon{
-    position:absolute; right:14px; top:13px; z-index:2; font:10px/1 var(--mono); letter-spacing:.1em;
-    color:#fff; background:rgba(255,255,255,.14); border-radius:999px; padding:5px 9px; text-transform:uppercase;
-  }
-
-  .foot{ margin-top:56px; display:flex; justify-content:space-between; align-items:center; color:var(--dim); font:12px/1.5 var(--mono); letter-spacing:.04em; flex-wrap:wrap; gap:12px; }
-  .foot a{ color:var(--dim); text-decoration:none; } .foot a:hover{ color:var(--ink); }
+  a{ color:inherit; text-decoration:none; }
+  :focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+  canvas{ display:block; width:100%; height:100%; }
+  .mono{ font:12px/1.4 var(--mono); letter-spacing:.06em; text-transform:uppercase; color:var(--dim); }
   .err{ display:none; color:#ff8a8a; font:12px var(--mono); margin-top:16px; }
+  .wrap{ max-width:1200px; margin:0 auto; padding:44px 24px 40px; }
 
-  /* переход галерея↔стихия: короткий opacity-кроссфейд (Carbon productive, только opacity) */
+  /* указатель стихий слева, одна живая сцена справа */
+  .body{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:0 56px;
+    grid-template-areas:"head stage" "list stage"; grid-template-rows:auto 1fr; }
+  .head{ grid-area:head; }
+  .head h1{ font-size:clamp(28px,3.4vw,44px); line-height:1.05; letter-spacing:-.03em; font-weight:600; margin:0; }
+  .head p{ margin:14px 0 0; max-width:40ch; color:var(--dim); }
+  .list{ grid-area:list; list-style:none; margin:48px 0 0; padding:0; border-bottom:1px solid var(--line); }
+  .row{ position:relative; display:grid; grid-template-columns:44px 1fr auto; align-items:baseline; gap:12px;
+    padding:14px 22px 12px 0; border-top:1px solid var(--line); color:var(--off); transition:color .2s var(--ease); }
+  .row .nm{ font-size:clamp(34px,5vw,68px); font-weight:600; letter-spacing:-.035em; line-height:1; }
+  .row .n, .row .vb{ font:12px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase; color:var(--dim); transition:color .2s var(--ease); }
+  .row.on, .row.on .n, .row.on .vb{ color:var(--ink); }
+  .row .vb::after{ content:"↗" / ""; position:absolute; right:0; opacity:0; transition:opacity .2s var(--ease); }
+  .row.on .vb::after{ opacity:1; }
+  .stage{ grid-area:stage; align-self:start; position:sticky; top:32px; margin:0; aspect-ratio:4/5;
+    max-height:calc(100vh - 64px); border-radius:28px; overflow:hidden; isolation:isolate; background:#0a0b0e; }
+  .stage canvas{ position:absolute; inset:0; }
+  .depth{ position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    box-shadow:inset 0 0 60px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px rgba(255,255,255,.06); }
+  .cap{ position:absolute; left:0; right:0; bottom:0; margin:0; padding:56px 20px 18px;
+    background:linear-gradient(0deg, rgba(0,0,0,.82) 0%, rgba(0,0,0,.66) 55%, rgba(0,0,0,0) 100%);
+    display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13.5px; line-height:1.4; color:#fff; }
+  .cap dt{ font:12px/1.5 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.74); }
+  .cap dd{ margin:0; }
+  .foot{ display:flex; justify-content:space-between; gap:12px; margin-top:64px; padding-top:18px; border-top:1px solid var(--line); }
+  .foot a:hover{ color:var(--ink); }
+
+  /* узкий экран: сцена залипает сверху, активна строка под ней */
+  @media (max-width:760px){
+    .body{ grid-template-columns:1fr; grid-template-areas:"head" "stage" "list"; grid-template-rows:auto; gap:24px; }
+    .stage{ top:16px; z-index:2; aspect-ratio:auto; height:42vh; height:42svh; border-radius:22px;
+      box-shadow:0 -20px 0 4px var(--bg); }   /* полоса фона над сценой: строки не просвечивают в зазоре */
+    .list{ margin:0; padding-bottom:36vh; border-bottom:0; }   /* иначе последняя строка не доезжает до сцены */
+    .row{ grid-template-columns:32px 1fr auto; }
+    .cap{ padding:40px 16px 14px; font-size:12.5px; }
+  }
+
+  /* переход галерея↔стихия: короткий opacity-кроссфейд */
   @keyframes pageFade{ from{ opacity:0; } to{ opacity:1; } }
   @media (prefers-reduced-motion: no-preference){
     body{ animation:pageFade .3s ease both; }
@@ -124,69 +83,24 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <div class="hero">
-    <h1>Everything here answers back.</h1>
-    <p>Touchable WebGL elements — hand-written GLSL, each a single file.</p>
+<main class="wrap">
+  <div class="body">
+    <header class="head">
+      <h1>Everything here<br>answers back.</h1>
+      <p>Seven interactive elements, hand-written in WebGL. Each one reacts to touch and keeps reacting after you let go.</p>
+    </header>
+    <ol class="list" id="list"></ol>
+    <figure class="stage">
+      <canvas id="stage"></canvas><div class="depth"></div>
+      <dl class="cap"><dt>You do</dt><dd id="does"></dd><dt>It answers</dt><dd id="ans"></dd></dl>
+    </figure>
   </div>
-
-  <div class="grid" id="grid">
-    <a class="card" href="./card-water.html">
-      <canvas data-mode="0"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Water</h3></div>
-    </a>
-
-    <a class="card" href="./prism.html">
-      <canvas data-mode="6"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Prism</h3></div>
-    </a>
-
-    <a class="card" href="./clouds.html">
-      <canvas data-mode="1"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Sky</h3></div>
-    </a>
-
-    <a class="card" href="./grass-3d.html">
-      <canvas data-mode="2"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Grass</h3></div>
-    </a>
-
-    <a class="card" href="./motherlode.html">
-      <canvas data-mode="3"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Wallet</h3></div>
-    </a>
-
-    <a class="card" href="./heatmap.html">
-      <canvas data-mode="4"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Warm</h3></div>
-    </a>
-
-    <a class="card" href="./lavalamp.html">
-      <canvas data-mode="5"></canvas>
-      <div class="depth"></div><div class="scrim"></div><div class="sheen"></div>
-      <div class="meta"><h3>Lava</h3></div>
-    </a>
-  </div>
-
   <div class="err" id="err"></div>
-  <div id="cursor"></div>
-
-  <div class="foot">
-    <span>Vladislav Chumachenko</span>
-    <a href="https://github.com/vladyanya" target="_blank" rel="noopener">github ↗</a>
-  </div>
-</div>
+  <footer class="foot mono"><span>Vladislav Chumachenko</span><a href="https://github.com/vladyanya/everything-answers-back" target="_blank" rel="noopener">github ↗</a></footer>
+</main>
 
 <script>
-/* Лёгкие превью-шейдеры для карточек: светящийся градиент стихии + inner-glow.
-   Один общий фрагментный шейдер, режим на карту. Клик по карте → полная версия. */
+/* Превью-шейдер стихий: один общий фрагментный шейдер, режим на стихию. */
 const FRAG = `#version 300 es
 precision highp float;
 uniform vec2  u_res;
@@ -373,107 +287,81 @@ function mkShader(canvas, mode){
     draw(t){ size(); gl.uniform2f(uRes,canvas.width,canvas.height); gl.uniform1f(uTime,t); gl.drawArrays(gl.TRIANGLES,0,3); } };
 }
 
-const shaders=[];
-document.querySelectorAll('.card canvas').forEach(cv=>{
-  const s=mkShader(cv, parseInt(cv.dataset.mode,10)); if(s) shaders.push(s);
-});
-let visible=true;
-document.addEventListener('visibilitychange',()=> visible=!document.hidden);
-/* reduce: превью — статичные кадры (один прогон + перерисовка на ресайз), без вечного цикла */
+/* Стихии: тексты «You do / It answers» — из README */
+const ELS=[
+  {m:0, name:'Water',  href:'./card-water.html', verb:'touch', does:'Touch the pool surface', answers:'Ripples spread by a wave-equation sim, light catches the caustics.'},
+  {m:6, name:'Prism',  href:'./prism.html',      verb:'tap',   does:'Tap the glass', answers:'White light runs the rim, splits into a spectrum, and the shape rings.'},
+  {m:1, name:'Sky',    href:'./clouds.html',     verb:'blow',  does:'Blow the wind', answers:'Cumulus clouds drift and morph along the gust.'},
+  {m:2, name:'Grass',  href:'./grass-3d.html',   verb:'walk',  does:'Walk through the field', answers:'Blades bend under the step and spring back.'},
+  {m:3, name:'Wallet', href:'./motherlode.html', verb:'tap',   does:'Tap to receive money', answers:'The sum is random, the gradient warms toward gold as you get richer.'},
+  {m:4, name:'Warm',   href:'./heatmap.html',    verb:'move',  does:'Move across the surface', answers:'Heat blooms behind the pointer and fades by diffusion.'},
+  {m:5, name:'Lava',   href:'./lavalamp.html',   verb:'touch', does:'Touch to heat, tap to release a bubble', answers:'Molten blobs rise, split and merge.'},
+];
+const $=(s)=>document.querySelector(s);
+const pad=(i)=>String(i+1).padStart(2,'0');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function loop(now){ if(visible){ const t=reduce?6.0:now/1000; for(const s of shaders) s.draw(t); }
-  if(!reduce) requestAnimationFrame(loop); }
+
+$('#list').innerHTML=ELS.map((e,i)=>`<li><a class="row" href="${e.href}" aria-describedby="d${i}"><span class="n">${pad(i)}</span><span class="nm">${e.name}</span><span class="vb">${e.verb}</span></a><span id="d${i}" hidden>${e.does}. ${e.answers}</span></li>`).join('');
+
+/* reduce: статичный кадр, перерисовка только при смене стихии и ресайзе */
+const stage=mkShader($('#stage'),0);
+let dirty=true;
+function loop(now){
+  if(stage && !document.hidden && (!reduce || dirty)){ stage.draw(reduce?6.0:now/1000); dirty=false; }
+  requestAnimationFrame(loop);
+}
 requestAnimationFrame(loop);
-if(reduce) addEventListener('resize', ()=>requestAnimationFrame(loop));
+addEventListener('resize',()=>{ dirty=true; });
 
-// «Soon» карточки не переходят
-document.querySelectorAll('.card[data-soon]').forEach(a=> a.addEventListener('click',e=>e.preventDefault()));
-
-/* Тактильность: карточка наклоняется к курсору как «мягкотелое» тело —
-   пружинная физика (масса-пружина-демпфер), лёгкое затухание и оседание.
-   Плюс приподнимается и чуть растёт при наведении, проминается при клике. */
-const TILT=9;
-function spring(p,v,t,dt,k,d){ const a=k*(t-p)-d*v; v+=a*dt; p+=v*dt; return [p,v]; }
-
-// tilt — только для мыши на широком экране и без reduced-motion; проверяем ЖИВЬЁМ каждый кадр
-const tiltBase = window.matchMedia('(hover:hover) and (pointer:fine) and (min-width:761px)');
-const tiltMQ = { get matches(){ return tiltBase.matches && !reduce; },
-  addEventListener:(t,f)=>tiltBase.addEventListener(t,f), addListener:(f)=>tiltBase.addListener&&tiltBase.addListener(f) };
-function syncNoTilt(){ document.body.classList.toggle('no-tilt', !tiltMQ.matches); }
-syncNoTilt();
-if(tiltMQ.addEventListener) tiltMQ.addEventListener('change', syncNoTilt); else tiltMQ.addListener(syncNoTilt);
-
-document.querySelectorAll('.card').forEach(card=>{
-  const st={ rx:0,vrx:0, ry:0,vry:0, lift:0,vl:0, sc:1,vs:0, active:false };
-  let pressed=false, last=performance.now();
-
-  card.addEventListener('pointermove',e=>{                 // только 3D-наклон (курсор-кольцо теперь глобальное)
-    if(!tiltMQ.matches){ st.txr=0; st.tyr=0; st.active=false; return; }
-    const r=card.getBoundingClientRect();
-    const x=(e.clientX-r.left)/r.width-0.5, y=(e.clientY-r.top)/r.height-0.5;
-    st.tyr=x*TILT; st.txr=-y*TILT; st.active=true;
-  });
-  card.addEventListener('pointerleave',()=>{ st.txr=0; st.tyr=0; st.active=false; });
-  card.addEventListener('pointerdown',()=>{ pressed=true; });
-  window.addEventListener('pointerup',()=>{ pressed=false; });
-
-  (function loop(now){
-    const dt=Math.min((now-last)/1000, 0.033); last=now;
-    if(!tiltMQ.matches){                               // узкий/тач: без 3D-наклона (кольцо-курсор остаётся через .touching)
-      if(card.style.transform) card.style.transform='';
-      st.rx=st.ry=st.lift=0; st.sc=1; st.vrx=st.vry=st.vl=st.vs=0; st.active=false;
-      requestAnimationFrame(loop); return;
-    }
-    const K=95, D=15;                                  // мягкая пружина, слегка недодемпфированная
-    [st.rx,st.vrx]=spring(st.rx,st.vrx, st.txr||0, dt, K, D);
-    [st.ry,st.vry]=spring(st.ry,st.vry, st.tyr||0, dt, K, D);
-    [st.lift,st.vl]=spring(st.lift,st.vl, st.active?-8:0, dt, 90, 16);
-    const tS=(st.active?1.035:1)-(pressed?0.07:0);   // заметнее утапливается при нажатии
-    [st.sc,st.vs]=spring(st.sc,st.vs, tS, dt, 130, 18);
-    card.style.transform=`perspective(1000px) rotateX(${st.rx.toFixed(3)}deg) rotateY(${st.ry.toFixed(3)}deg) translateY(${st.lift.toFixed(2)}px) scale(${st.sc.toFixed(4)})`;
-    requestAnimationFrame(loop);
-  })(performance.now());
+/* Наведение/фокус на строку — стихия на сцене. Строка подсвечивается сразу, сцена меняется
+   не чаще раза в 180 мс: при быстром проходе курсором светлые и тёмные стихии не вспыхивают.
+   Тач: первый тап показывает стихию, второй открывает. */
+const rows=[...document.querySelectorAll('.row')]; let ai=-1, shown=-1, lastSwap=0, swapT=0, lastPT='mouse';
+function showStage(i){
+  if(i===shown) return; shown=i; lastSwap=performance.now();
+  stage&&stage.setMode(ELS[i].m); dirty=true;
+  $('#does').textContent=ELS[i].does; $('#ans').textContent=ELS[i].answers;
+}
+function setA(i){
+  if(i===ai) return; ai=i;
+  rows.forEach((r,k)=>r.classList.toggle('on',k===i));
+  clearTimeout(swapT);
+  swapT=setTimeout(()=>showStage(ai), Math.max(0, 180-(performance.now()-lastSwap)));
+}
+rows.forEach((r,i)=>{
+  r.addEventListener('pointerenter',e=>{ if(e.pointerType!=='touch') setA(i); });
+  r.addEventListener('pointerdown',e=>{ lastPT=e.pointerType; });
+  r.addEventListener('focus',()=>setA(i));
+  r.addEventListener('click',e=>{ if(lastPT==='touch' && i!==ai){ e.preventDefault(); setA(i); } });
 });
 
-/* Клик по карточке → короткий fade-out галереи, затем переход (карточка-страница делает fade-in на загрузке).
-   reduce объявлен выше (превью). */
-const allCards=[...document.querySelectorAll('.card')];
-document.querySelectorAll('.card').forEach(card=>{
-  card.addEventListener('click',e=>{
-    if(card.hasAttribute('data-soon')) return;
-    const href=card.getAttribute('href'); if(!href) return;
-    e.preventDefault();
-    try{ sessionStorage.setItem('eab_lastCard', allCards.indexOf(card)); }catch(_){}   // запомнить карточку
-    if(reduce){ location.href=href; return; }
-    document.body.classList.add('leaving');
-    setTimeout(()=>{ location.href=href; }, 175);
-  });
+/* вернуть на ту стихию, с которой ушли (после «back») */
+let start=0;
+try{ const li=+sessionStorage.getItem('eab_lastCard'); if(ELS[li]) start=li; }catch(_){}
+setA(start); showStage(start);
+if(start) rows[start].scrollIntoView({block:'center'});
+
+/* узкий экран: активна строка сразу под сценой */
+const narrow=matchMedia('(max-width:760px)');
+addEventListener('scroll',()=>{
+  if(!narrow.matches) return;
+  const line=$('.stage').getBoundingClientRect().bottom+48;
+  let best=0, bd=Infinity;
+  rows.forEach((r,i)=>{ const b=r.getBoundingClientRect(), d=Math.abs((b.top+b.bottom)/2-line); if(d<bd){ bd=d; best=i; } });
+  setA(best);
+},{passive:true});
+
+/* переход на стихию: короткий fade-out, стихия делает fade-in на загрузке */
+document.addEventListener('click',e=>{
+  const a=e.target.closest('a.row');
+  if(!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  try{ sessionStorage.setItem('eab_lastCard', rows.indexOf(a)); }catch(_){}
+  if(reduce){ location.href=a.href; return; }
+  document.body.classList.add('leaving');
+  setTimeout(()=>{ location.href=a.href; },175);
 });
-// вернуть пользователя к той карточке, с которой он ушёл (после «back»)
-try{ const li=sessionStorage.getItem('eab_lastCard');
-  if(li!==null && allCards[+li]) allCards[+li].scrollIntoView({block:'nearest', inline:'center'}); }catch(_){}
-
-// колесо мыши → горизонтальная прокрутка ряда на узком экране
-const gridEl=document.getElementById('grid');
-gridEl.addEventListener('wheel', e=>{ if(gridEl.scrollWidth<=gridEl.clientWidth) return;
-  if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ gridEl.scrollLeft+=e.deltaY; e.preventDefault(); } }, {passive:false});
-
-/* Глобальный кружок-курсор: следует за мышью через transform (GPU-композитинг, без перерисовок → плавно). */
-(function(){
-  const cur=document.getElementById('cursor');
-  if(!cur || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  let tx=innerWidth/2, ty=innerHeight/2, cx=tx, cy=ty, shown=false;
-  addEventListener('pointermove',e=>{
-    tx=e.clientX; ty=e.clientY;
-    const over = e.target && e.target.closest && e.target.closest('.grid');
-    if(over){ if(!shown){ shown=true; cx=tx; cy=ty; cur.classList.add('show'); } }
-    else if(shown){ shown=false; cur.classList.remove('show'); }
-  }, {passive:true});
-  document.addEventListener('mouseleave',()=>{ shown=false; cur.classList.remove('show'); });
-  (function raf(){ cx+=(tx-cx)*0.4; cy+=(ty-cy)*0.4;
-    cur.style.transform='translate3d('+cx.toFixed(1)+'px,'+cy.toFixed(1)+'px,0)';
-    requestAnimationFrame(raf); })();
-})();
+addEventListener('pageshow',()=>document.body.classList.remove('leaving'));
 </script>
 </body>
 </html>
